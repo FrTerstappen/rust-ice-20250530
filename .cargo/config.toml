@@ -1,0 +1,143 @@
+[env]
+RUST_BACKTRACE = "full"
+RUST_LIB_BACKTRACE = "full"
+WINIT_UNIX_BACKEND = "wayland" # Can also be "x11"
+
+[unstable]
+mtime-on-use = true
+codegen-backend = true
+
+[future-incompat-report]
+frequency = "always"
+
+[build]
+jobs = -1
+target = "x86_64-unknown-linux-gnu"
+# rustflags = ["-Z", "threads=6"] # Activated on linux
+
+[cargo-new]
+vcs = "none"
+
+###############
+# Fast builds #
+###############
+# TODO this is not available in the base rust image in ci
+
+#
+# This configuration enables the following:
+#
+# - Faster linker (stable)
+#   - LLD is a faster drop-in replacement for the default linker, part of the LLVM project.
+#     It requires installation, please see the relevant section of this config for your platform.
+#   - Mold / Sold is a linker faster than even LLD, but with limited platform support.
+#     It requires installation, please see the relevant section of this config for your platform.
+#     Mold is precompiled for Linux, but must be manually built on MacOS and is unavailable for Windows.
+#   - Please note that LLD and Mold are incompatible with one another. Pick one and comment out the other!
+# - Nightly (unstable) features
+#   - `share-generics` prevents duplicating monomorphized generic code across crates.
+#   - `threads` makes use of the parallel frontend to increase compiler performance.
+
+[target.x86_64-unknown-linux-gnu]
+linker = "clang"
+rustflags = [
+    # LLD linker
+    #
+    # You may need to install it:
+    #
+    # - Ubuntu: `sudo apt-get install lld clang`
+    # - Fedora: `sudo dnf install lld clang`
+    # - Arch: `sudo pacman -S lld clang`
+    # "-Clink-arg=-fuse-ld=lld", # Use LLD linker
+
+    # Mold linker
+    #
+    # You may need to install it:
+    #
+    # - Ubuntu: `sudo apt-get install mold clang`
+    # - Fedora: `sudo dnf install mold clang`
+    # - Arch: `sudo pacman -S mold clang`
+    "-Clink-arg=-fuse-ld=/usr/bin/mold",
+
+    # For usage of flamegraph with mold
+    "-Clink-arg=-Wl,--no-rosegment",
+
+    # Nightly
+    "-Zshare-generics=y", # (Nightly) Make the current crate share its generic instantiations
+    "-Zthreads=0",        # (Nightly) Use parallel frontend
+
+    # Explicitly activate the feature for abi compatibility
+    "-Ctarget-feature=+x87",
+]
+
+# NOTE: you must install [Mach-O LLD Port](https://lld.llvm.org/MachO/index.html) on mac. you can easily do this by installing llvm which includes lld with the "brew" package manager:
+# `brew install llvm`
+[target.x86_64-apple-darwin]
+rustflags = [
+    # LLD linker
+    #
+    # You may need to install it:
+    #
+    # Brew: `brew install llvm`
+    # Manually: <https://lld.llvm.org/MachO/index.html>
+    "-Clink-arg=-fuse-ld=/usr/local/opt/llvm/bin/ld64.lld",
+
+    # Sold linker
+    #
+    # You may need to install it:
+    #
+    # Manually: <https://github.com/bluewhalesystems/sold>
+    # "-Clink-arg=-fuse-ld=/usr/local/bin/ld64.sold",
+
+    # Nightly
+    # "-Zshare-generics=y",
+    # "-Zthreads=0",
+
+    # Explicitly activate the feature for abi compatibility
+    "-Ctarget-feature=+x87",
+]
+
+[target.aarch64-apple-darwin]
+rustflags = [
+    # LLD linker
+    #
+    # You may need to install it:
+    #
+    # Brew: `brew install llvm`
+    # Manually: <https://lld.llvm.org/MachO/index.html>
+    "-Clink-arg=-fuse-ld=/opt/homebrew/opt/llvm/bin/ld64.lld",
+
+    # Sold linker
+    #
+    # You may need to install it:
+    #
+    # Manually: <https://github.com/bluewhalesystems/sold>
+    # "-Clink-arg=-fuse-ld=/usr/local/bin/ld64.sold",
+
+    # Nightly
+    # "-Zshare-generics=y",
+    # "-Zthreads=0",
+]
+
+[target.x86_64-pc-windows-msvc]
+# LLD linker
+#
+# You may need to install it:
+#
+# ```
+# cargo install -f cargo-binutils
+# rustup component add llvm-tools
+# ```
+linker = "rust-lld.exe"
+rustflags = [
+    # Nightly
+    # "-Zshare-generics=n", # This needs to be off if you use dynamic linking on Windows.
+    # "-Zthreads=0",
+
+    # Explicitly activate the feature for abi compatibility
+    "-Ctarget-feature=+x87",
+]
+
+# Optional: Uncommenting the following improves compile times, but reduces the amount of debug info to 'line number tables only'
+# In most cases the gains are negligible, but if you are on macos and have slow compile times you should see significant gains.
+# [profile.dev]
+# debug = 1

@@ -1,0 +1,22 @@
+[workspace]
+resolver = "3"
+exclude = []
+
+members = ["crates/ice_proc_macro", "crates/ice_test"]
+default-members = ["crates/ice_test"]
+
+[workspace.package]
+version = "0.0.0"
+edition = "2024"
+license = "UNLICENSED"
+publish = false
+readme = "README.md"
+authors = ["Dummy"]
+rust-version = "1.87.0"
+repository = "Dummy"
+
+[workspace.dependencies]
+proc-macro2 = { version = "1.0.95", default-features = false }
+quote = { version = "1.0.40", default-features = false }
+syn = { version = "2.0.101", default-features = true, features = ["full"] }
+ice_proc_macro = { version = "0.0.0", path = "crates/ice_proc_macro" }
